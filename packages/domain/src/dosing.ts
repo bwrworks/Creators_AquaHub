@@ -1,17 +1,25 @@
 /**
  * Creators AquaHub Deterministic Dosing Engine
- * All calculations are executed strictly by deterministic, unit-tested pure code.
- * Zero free-form model hallucination.
+ * 
+ * ARCHITECTURAL SAFETY GUARANTEES:
+ * 1. Zero Free-Form Model Hallucination: Mathematical calculations run only in pure TypeScript.
+ * 2. Reviewed Specification Requirement: Specifications must have reviewStatus: "reviewed".
+ * 3. Daily Shift Limit Mandatory: Never defaults a missing max daily shift to the entire target change.
+ * 4. Pre-Launch Guardrail: Real chemical dosing recommendations remain disabled (REAL_DOSING_CALCULATIONS_ENABLED = false)
+ *    until formal review of product metadata is completed. Pure mathematical simulations are permitted for testing.
  */
 
 import { FreshnessState } from "./parameters.js";
+
+export const REAL_DOSING_CALCULATIONS_ENABLED = false;
 
 export interface ProductDosingSpec {
   productId: string;
   productName: string;
   manufacturer: string;
   targetParameterSlug: string;
-  /** Amount of product needed to raise 100 Litres by 1 unit (e.g. 5ml raises 100L by 1 dKH) */
+  reviewStatus: "reviewed" | "draft" | "retired";
+  /** Amount of product needed to raise standard volume by parameterDelta (e.g. 5ml raises 100L by 1 dKH) */
   standardConcentrationRate: {
     productAmount: number;
     productUnit: "ml" | "gram" | "drop" | "tsp" | "cap";
@@ -19,8 +27,8 @@ export interface ProductDosingSpec {
     parameterDelta: number;
     parameterUnit: string;
   };
-  /** Reviewed maximum recommended daily shift from manufacturer specification */
-  maxDailyShift?: number;
+  /** Mandatory reviewed maximum recommended daily parameter shift from manufacturer/veterinary review */
+  maxDailyShift: number;
   instructions: string;
 }
 
@@ -35,13 +43,20 @@ export interface DosingCalculationInput {
   productSpec: ProductDosingSpec;
 }
 
+export interface DosingExecutionOptions {
+  /** Explicitly enables pure simulation calculation for unit testing without live dispensing */
+  allowSimulation?: boolean;
+}
+
 export interface DosingCalculationResult {
   isSafe: boolean;
-  totalRequiredProductAmount: number;
-  recommendedDailyProductAmount: number;
+  canDispense: boolean;
+  status: "CALCULATED_SIMULATION" | "DISABLED_PRE_LAUNCH" | "SAFETY_ABSTENTION";
+  totalRequiredProductAmount: number | null;
+  recommendedDailyProductAmount: number | null;
   productUnit: string;
   parameterShiftTotal: number;
-  numberOfDaysToTarget: number;
+  numberOfDaysToTarget: number | null;
   notes: string[];
 }
 
@@ -53,21 +68,44 @@ export class DosingValidationError extends Error {
 }
 
 /**
- * Executes a deterministic dosing calculation.
- * Strictly rejects missing, incompatible, or stale inputs.
+ * Executes a deterministic dosing calculation with strict safety validations.
+ * Refuses to return numeric dosage if any safety prerequisite is absent.
  */
-export function calculateDosing(input: DosingCalculationInput): DosingCalculationResult {
+export function calculateDosing(
+  input: DosingCalculationInput,
+  options: DosingExecutionOptions = {}
+): DosingCalculationResult {
   const { netWaterVolumeLitres, currentReading, targetValue, productSpec } = input;
+  const spec = productSpec.standardConcentrationRate;
 
-  // Validation 1: Water Volume
-  if (!netWaterVolumeLitres || netWaterVolumeLitres <= 0) {
+  // Pre-Launch Safety Lock: Real dispensing recommendations are disabled pending biochemical review.
+  if (!options.allowSimulation && !REAL_DOSING_CALCULATIONS_ENABLED) {
+    const shift = Number((targetValue - currentReading.value).toFixed(2));
+    return {
+      isSafe: false,
+      canDispense: false,
+      status: "DISABLED_PRE_LAUNCH",
+      totalRequiredProductAmount: null,
+      recommendedDailyProductAmount: null,
+      productUnit: spec.productUnit,
+      parameterShiftTotal: shift > 0 ? shift : 0,
+      numberOfDaysToTarget: null,
+      notes: [
+        "Real chemical dosing recommendations are disabled pre-launch pending biochemist review of chemical metadata.",
+        "Always verify water chemistry using laboratory photometers or liquid titration before manually adjusting parameters.",
+      ],
+    };
+  }
+
+  // Prerequisite 1: Volume Validation and Bounds Check (1L to 50,000L)
+  if (!netWaterVolumeLitres || netWaterVolumeLitres < 1 || netWaterVolumeLitres > 50000 || !Number.isFinite(netWaterVolumeLitres)) {
     throw new DosingValidationError(
-      "MISSING_VOLUME",
-      "Valid net aquarium water volume is strictly required before calculating chemical dosage."
+      "INVALID_VOLUME",
+      `Valid net aquarium water volume between 1L and 50,000L is required (got: ${netWaterVolumeLitres}).`
     );
   }
 
-  // Validation 2: Stale Reading Rejection
+  // Prerequisite 2: Freshness Verification (Reject Stale)
   if (currentReading.freshness === "stale") {
     throw new DosingValidationError(
       "STALE_READING",
@@ -75,7 +113,22 @@ export function calculateDosing(input: DosingCalculationInput): DosingCalculatio
     );
   }
 
-  // Validation 3: Target compatibility
+  // Prerequisite 3: Parameter Unit Matching
+  if (currentReading.unit.trim().toLowerCase() !== spec.parameterUnit.trim().toLowerCase()) {
+    throw new DosingValidationError(
+      "UNIT_MISMATCH",
+      `Unit mismatch: reading unit '${currentReading.unit}' does not match product specification unit '${spec.parameterUnit}'.`
+    );
+  }
+
+  // Prerequisite 4: Target Value and Shift Sanity
+  if (!Number.isFinite(currentReading.value) || currentReading.value < 0) {
+    throw new DosingValidationError(
+      "INVALID_READING_VALUE",
+      `Current measurement value must be a non-negative finite number (got: ${currentReading.value}).`
+    );
+  }
+
   const parameterShiftTotal = targetValue - currentReading.value;
   if (parameterShiftTotal <= 0) {
     throw new DosingValidationError(
@@ -84,45 +137,60 @@ export function calculateDosing(input: DosingCalculationInput): DosingCalculatio
     );
   }
 
-  // Validation 4: Product specification validity
-  const spec = productSpec.standardConcentrationRate;
-  if (
-    spec.productAmount <= 0 ||
-    spec.targetWaterVolumeLitres <= 0 ||
-    spec.parameterDelta <= 0
-  ) {
+  if (parameterShiftTotal > 100) {
     throw new DosingValidationError(
-      "INVALID_PRODUCT_SPEC",
-      "Product dosing concentration specification is invalid or unreviewed."
+      "EXCESSIVE_SHIFT",
+      `Target parameter shift of +${parameterShiftTotal.toFixed(2)} exceeds maximum safe single-cycle shift bounds.`
     );
   }
 
-  // Core Math:
-  // Product needed per 1 litre per 1 unit shift = spec.productAmount / (spec.targetWaterVolumeLitres * spec.parameterDelta)
-  const productPerLitrePerUnit =
-    spec.productAmount / (spec.targetWaterVolumeLitres * spec.parameterDelta);
+  // Prerequisite 5: Specification Review Status
+  if (productSpec.reviewStatus !== "reviewed") {
+    throw new DosingValidationError(
+      "UNREVIEWED_PRODUCT_SPEC",
+      `Product dosing specification for '${productSpec.productName}' has reviewStatus '${productSpec.reviewStatus}'. Must be 'reviewed' before calculating dosage.`
+    );
+  }
 
-  const totalRequiredProductAmount =
-    productPerLitrePerUnit * netWaterVolumeLitres * parameterShiftTotal;
+  // Prerequisite 6: Mandatory Reviewed Maximum Daily Parameter Shift (NEVER default to entire shift)
+  if (!productSpec.maxDailyShift || productSpec.maxDailyShift <= 0 || !Number.isFinite(productSpec.maxDailyShift)) {
+    throw new DosingValidationError(
+      "MISSING_MAX_DAILY_SHIFT",
+      "Maximum daily parameter shift must be explicitly defined as a positive finite number. Defaulting to target change is strictly prohibited."
+    );
+  }
 
-  // Safe daily pacing using manufacturer reviewed max daily shift (or default single-day if shift is small)
-  const maxShiftPerDay = productSpec.maxDailyShift ?? parameterShiftTotal;
-  const numberOfDaysToTarget = Math.max(1, Math.ceil(parameterShiftTotal / maxShiftPerDay));
+  // Prerequisite 7: Concentration specification validity
+  if (spec.productAmount <= 0 || spec.targetWaterVolumeLitres <= 0 || spec.parameterDelta <= 0) {
+    throw new DosingValidationError(
+      "INVALID_PRODUCT_SPEC",
+      "Product dosing concentration specification has non-positive parameters."
+    );
+  }
+
+  // Mathematical Calculation
+  const productPerLitrePerUnit = spec.productAmount / (spec.targetWaterVolumeLitres * spec.parameterDelta);
+  const totalRequiredProductAmount = productPerLitrePerUnit * netWaterVolumeLitres * parameterShiftTotal;
+
+  // Safe daily pacing using manufacturer reviewed max daily shift limit
+  const numberOfDaysToTarget = Math.max(1, Math.ceil(parameterShiftTotal / productSpec.maxDailyShift));
   const recommendedDailyProductAmount = totalRequiredProductAmount / numberOfDaysToTarget;
 
   const notes: string[] = [
-    `Calculated for net volume of ${Math.round(netWaterVolumeLitres)}L.`,
-    `Total shift: +${parameterShiftTotal.toFixed(2)} ${spec.parameterUnit} over ${numberOfDaysToTarget} day(s).`,
+    `Simulation calculation for net volume of ${Math.round(netWaterVolumeLitres)}L.`,
+    `Total target shift: +${parameterShiftTotal.toFixed(2)} ${spec.parameterUnit} paced over ${numberOfDaysToTarget} day(s).`,
   ];
 
   if (numberOfDaysToTarget > 1) {
     notes.push(
-      `Paced at max +${maxShiftPerDay} ${spec.parameterUnit}/day to prevent osmotic or chemical shock to livestock.`
+      `Paced at max +${productSpec.maxDailyShift} ${spec.parameterUnit}/day to prevent osmotic or chemical shock to livestock.`
     );
   }
 
   return {
     isSafe: true,
+    canDispense: false, // Remains false pre-launch
+    status: "CALCULATED_SIMULATION",
     totalRequiredProductAmount: Number(totalRequiredProductAmount.toFixed(2)),
     recommendedDailyProductAmount: Number(recommendedDailyProductAmount.toFixed(2)),
     productUnit: spec.productUnit,

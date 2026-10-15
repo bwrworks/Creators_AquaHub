@@ -8,9 +8,10 @@
   "scripts": {
     "build": "tsc -b",
     "type-check": "tsc --noEmit",
-    "test": "tsc -b && node ./dist/__tests__/domain.test.js && node ./dist/__tests__/auth-poc.test.js",
+    "test": "tsc -b && node ./dist/__tests__/domain.test.js && node ./dist/__tests__/auth-poc.test.js && node ./dist/__tests__/database-policies.test.js",
     "test:domain": "tsc -b && node ./dist/__tests__/domain.test.js",
     "test:poc": "tsc -b && node ./dist/__tests__/auth-poc.test.js",
+    "test:db": "tsc -b && node ./dist/__tests__/database-policies.test.js",
     "clean": "rm -rf dist"
   },
   "dependencies": {

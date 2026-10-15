@@ -550,11 +550,14 @@ drop policy if exists community_posts_delete_self on public.community_posts;
 create policy community_posts_delete_self on public.community_posts for delete using (author_id = (select auth.uid()));
 
 -- Comments/reactions must be from signed-in users and attach to visible posts.
+-- Ordinary users can only see published comments on visible posts. Author can always see their own comment.
 drop policy if exists comments_select_visible_post on public.post_comments;
 create policy comments_select_visible_post on public.post_comments for select using (
-  author_id = (select auth.uid()) or exists (
-    select 1 from public.community_posts p where p.id = post_id and
-    (p.author_id = (select auth.uid()) or (p.visibility = 'public' and p.status = 'published'))
+  (author_id = (select auth.uid())) or (
+    status = 'published' and exists (
+      select 1 from public.community_posts p where p.id = post_id and
+      (p.author_id = (select auth.uid()) or (p.visibility = 'public' and p.status = 'published'))
+    )
   )
 );
 drop policy if exists comments_insert_self on public.post_comments;
@@ -594,10 +597,17 @@ drop policy if exists blocks_delete_self on public.user_blocks;
 create policy blocks_delete_self on public.user_blocks for delete using (blocker_id = (select auth.uid()));
 
 -- Reports: reporters can create and inspect their own reports; moderators operate via trusted server tooling.
+-- Reporters can ONLY insert new reports with status='open', and cannot set moderator_note, reviewed_by, or reviewed_at.
 drop policy if exists reports_select_reporter on public.content_reports;
 create policy reports_select_reporter on public.content_reports for select using (reporter_id = (select auth.uid()));
 drop policy if exists reports_insert_reporter on public.content_reports;
-create policy reports_insert_reporter on public.content_reports for insert with check (reporter_id = (select auth.uid()));
+create policy reports_insert_reporter on public.content_reports for insert with check (
+  reporter_id = (select auth.uid()) and
+  status = 'open' and
+  moderator_note is null and
+  reviewed_by is null and
+  reviewed_at is null
+);
 
 -- Stores: only verified active profiles are publicly discoverable. All writes/verification go through trusted admin flow.
 drop policy if exists stores_select_verified on public.store_profiles;

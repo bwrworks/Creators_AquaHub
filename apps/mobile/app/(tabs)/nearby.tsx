@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, typography, spacing, radii } from "@cah/design-tokens";
-import { SYNTHETIC_VERIFIED_STORES } from "@cah/domain";
+import { SYNTHETIC_DEMO_STORES } from "@cah/domain";
 import { LoadingState, EmptyState, ErrorState, OfflineBanner } from "../../src/components/ui";
 
 type StateMode = "loaded" | "loading" | "empty" | "error" | "offline";
@@ -11,7 +11,7 @@ export default function NearbyScreen() {
   const [stateMode, setStateMode] = useState<StateMode>("loaded");
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>("All");
 
-  const filteredStores = SYNTHETIC_VERIFIED_STORES.filter((store) => {
+  const filteredStores = SYNTHETIC_DEMO_STORES.filter((store) => {
     if (selectedSpecialty === "All") return true;
     return store.specialization.some((s) => s.toLowerCase().includes(selectedSpecialty.toLowerCase()));
   });
@@ -20,13 +20,13 @@ export default function NearbyScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         {stateMode === "offline" && (
-          <OfflineBanner message="Offline Mode • Viewing verified offline directory • 0 network requests" />
+          <OfflineBanner message="Offline Mode • Viewing sample demo listings • 0 network requests" />
         )}
 
         <View style={styles.header}>
           <View>
-            <Text style={styles.subtitle}>LOCAL AQUARIUM NETWORK</Text>
-            <Text style={styles.title}>Verified Stores</Text>
+            <Text style={styles.subtitle}>LOCAL AQUARIUM NETWORK (PRE-LAUNCH PREVIEW)</Text>
+            <Text style={styles.title}>Store Directory (Demo)</Text>
           </View>
         </View>
 
@@ -57,31 +57,31 @@ export default function NearbyScreen() {
           </ScrollView>
         </View>
 
-        {/* Directory Ethics & Audit Policy */}
+        {/* Honest Demo Notice: No false claims or fake partner audits */}
         <View style={styles.policyCard}>
           <View style={styles.policyHeader}>
-            <Text style={styles.policyTitle}>Verified & Permitted Listings Only</Text>
-            <Text style={styles.policyBadge}>₹0 Scraping Policy</Text>
+            <Text style={styles.policyTitle}>Sample Directory Preview • Not Real Partners</Text>
+            <Text style={styles.policyBadge}>₹0 Pre-Launch Policy</Text>
           </View>
           <Text style={styles.policyText}>
-            Every listed store is verified by direct physical visit or phone audit with store owners across Bengaluru. 
-            We never bulk-scrape Google Maps or publish unconsenting business listings.
+            All store entries below are synthetic mock fixtures created strictly to preview the directory layout and category filters. 
+            They do NOT represent genuine business partners, verified audits, or real retail endorsements. Live partner verification opens post-launch.
           </Text>
         </View>
 
         {/* Conditional States */}
         {stateMode === "loading" && (
           <LoadingState
-            message="Locating verified partner stores..."
-            submessage="Filtering physical audit records for Bengaluru"
+            message="Loading demo directory preview..."
+            submessage="Rendering local synthetic store fixtures"
           />
         )}
 
         {stateMode === "empty" && (
           <EmptyState
-            title="No Stores in Selected Area"
-            description="We are currently piloting in Bengaluru. Expand your filter to view verified local partners."
-            actionLabel="Reset to All Stores"
+            title="No Sample Stores in Selected Filter"
+            description="All demo listings are classified under sample categories. Reset the filter to view all sample placeholders."
+            actionLabel="Reset to All Samples"
             onAction={() => setSelectedSpecialty("All")}
           />
         )}
@@ -89,8 +89,8 @@ export default function NearbyScreen() {
         {stateMode === "error" && (
           <ErrorState
             title="Unable to Query Directory"
-            message="Directory query timed out. Showing verified offline local listings."
-            retryLabel="Refresh Directory"
+            message="Directory preview query timed out. Showing local offline demo fixtures."
+            retryLabel="Refresh Preview"
             onRetry={() => setStateMode("loaded")}
           />
         )}
@@ -121,7 +121,7 @@ export default function NearbyScreen() {
               ))}
             </View>
 
-            {/* Store Cards */}
+            {/* Store Cards (Explicitly Labeled Sample Placeholders) */}
             {filteredStores.map((store) => (
               <View key={store.id} style={styles.storeCard}>
                 <View style={styles.storeHeader}>
@@ -129,8 +129,8 @@ export default function NearbyScreen() {
                     <Text style={styles.storeName}>{store.name}</Text>
                     <Text style={styles.storeArea}>{store.area}, {store.city}</Text>
                   </View>
-                  <View style={styles.verifiedBadge}>
-                    <Text style={styles.verifiedText}>✓ VERIFIED</Text>
+                  <View style={styles.sampleBadge}>
+                    <Text style={styles.sampleBadgeText}>SAMPLE MOCK</Text>
                   </View>
                 </View>
 
@@ -146,17 +146,17 @@ export default function NearbyScreen() {
                   ))}
                 </View>
 
-                {/* Provenance Audit Footer */}
+                {/* Disclaimer Footer */}
                 <View style={styles.storeProvenance}>
                   <Text style={styles.provenanceText}>
-                    Audited: {store.auditDate} • Method: {store.auditMethod === "physical_onsite" ? "On-site Visit" : "Direct Owner Call"}
+                    {store.disclaimer}
                   </Text>
                 </View>
               </View>
             ))}
 
             <TouchableOpacity style={styles.claimButton} activeOpacity={0.85}>
-              <Text style={styles.claimButtonText}>+ Claim or Register a Store Profile</Text>
+              <Text style={styles.claimButtonText}>+ Register Real Business Profile (Post-Launch)</Text>
             </TouchableOpacity>
           </>
         )}
@@ -312,18 +312,18 @@ const styles = StyleSheet.create({
     color: colors.brand.green,
     marginTop: 2,
   },
-  verifiedBadge: {
-    backgroundColor: "rgba(139, 207, 50, 0.18)",
+  sampleBadge: {
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
     paddingVertical: 2,
     paddingHorizontal: spacing.xs,
     borderRadius: radii.xs,
     borderWidth: 1,
-    borderColor: "rgba(139, 207, 50, 0.4)",
+    borderColor: "rgba(245, 158, 11, 0.35)",
   },
-  verifiedText: {
+  sampleBadgeText: {
     fontFamily: typography.fonts.sansBold,
     fontSize: 9,
-    color: colors.brand.green,
+    color: colors.freshness.aging,
     letterSpacing: 0.5,
   },
   storeAddress: {
@@ -364,18 +364,19 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.sans,
     fontSize: 10,
     color: colors.text.muted,
+    fontStyle: "italic",
   },
   claimButton: {
     borderWidth: 1,
-    borderColor: colors.brand.green,
+    borderColor: colors.border.subtle,
     borderRadius: radii.sm,
     paddingVertical: spacing.md,
     alignItems: "center",
     marginTop: spacing.xs,
   },
   claimButtonText: {
-    fontFamily: typography.fonts.sansSemiBold,
+    fontFamily: typography.fonts.sansMedium,
     fontSize: typography.sizes.xs,
-    color: colors.brand.green,
+    color: colors.text.secondary,
   },
 });
