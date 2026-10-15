@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build and distribution directories
+dist/
+build/
+.expo/
+.expo-shared/
+web-build/
+
+# Convex generated files (local cache / codegen)
+# Keep schema and auth.config, ignore generated folder if desired or track stubs
+# convex/_generated/
+
+# Environment and sensitive keys
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

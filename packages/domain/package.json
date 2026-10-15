@@ -1,0 +1,23 @@
+{
+  "name": "@cah/domain",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "type-check": "tsc --noEmit",
+    "test": "tsc -b && node ./dist/__tests__/domain.test.js && node ./dist/__tests__/auth-poc.test.js",
+    "test:domain": "tsc -b && node ./dist/__tests__/domain.test.js",
+    "test:poc": "tsc -b && node ./dist/__tests__/auth-poc.test.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^5.7.2"
+  }
+}

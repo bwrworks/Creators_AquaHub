@@ -1,0 +1,19 @@
+{
+  "name": "creators-aquahub-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Creators AquaHub mobile aquarium companion and community ecosystem under Creators Aquarium",
+  "scripts": {
+    "start": "pnpm --filter creators-aquahub-mobile start",
+    "android": "pnpm --filter creators-aquahub-mobile android",
+    "ios": "pnpm --filter creators-aquahub-mobile ios",
+    "build": "pnpm -r --if-present build",
+    "type-check": "pnpm -r --if-present type-check",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Creators AquaHub",
+    "slug": "creators-aquahub",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/brand/icon-square.png",
+    "scheme": "aquahub",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.creatorsaquarium.aquahub",
+      "backgroundColor": "#050505"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/icon-square.png",
+        "backgroundColor": "#050505"
+      },
+      "package": "com.creatorsaquarium.aquahub",
+      "backgroundColor": "#050505"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
