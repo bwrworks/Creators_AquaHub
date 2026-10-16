@@ -15,6 +15,8 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radii } from "@cah/design-tokens";
 import { useTanks, Tank, ParameterEntry } from "../../context/TankContext";
 import { getTankImage } from "../../utils/tankAssets";
+import { DosingCalculatorModal } from "./DosingCalculatorModal";
+import { AquaHubAIModal } from "./AquaHubAIModal";
 
 interface TankDetailModalProps {
   visible: boolean;
@@ -28,6 +30,8 @@ export function TankDetailModal({ visible, tank, onClose }: TankDetailModalProps
   const { logParameter, addLivestock, addEquipment, deleteTank } = useTanks();
 
   const [activeTab, setActiveTab] = useState<TankTab>("parameters");
+  const [isDosingOpen, setIsDosingOpen] = useState(false);
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   // Parameter Logging Form State
   const [showLogSheet, setShowLogSheet] = useState(false);
@@ -256,18 +260,36 @@ export function TankDetailModal({ visible, tank, onClose }: TankDetailModalProps
             <View style={styles.sectionContainer}>
               {/* Quick Log Action Bar */}
               <View style={styles.quickActionCard}>
-                <View>
-                  <Text style={styles.quickActionEyebrow}>REEFBAY WATER CHEMISTRY</Text>
-                  <Text style={styles.quickActionTitle}>Precision Parameter Log</Text>
+                <View style={styles.quickActionHeaderLeft}>
+                  <Text style={styles.quickActionEyebrow}>WATER CHEMISTRY</Text>
+                  <Text style={styles.quickActionTitle}>Telemetry & Actions</Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.primaryActionButton}
-                  onPress={() => handleOpenParamLogger()}
-                  activeOpacity={0.85}
-                >
-                  <Feather name="plus" size={16} color="#050505" />
-                  <Text style={styles.primaryActionText}>Log Reading</Text>
-                </TouchableOpacity>
+                <View style={styles.quickActionButtonsRow}>
+                  <TouchableOpacity
+                    style={styles.aiQuickBtn}
+                    onPress={() => setIsAIOpen(true)}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="cpu" size={13} color="#FFFFFF" />
+                    <Text style={styles.aiQuickBtnText}>AI</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.dosingQuickBtn}
+                    onPress={() => setIsDosingOpen(true)}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="shield" size={13} color="#FFFFFF" />
+                    <Text style={styles.dosingQuickBtnText}>Dosing</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.primaryActionButton}
+                    onPress={() => handleOpenParamLogger()}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="plus" size={13} color="#050505" />
+                    <Text style={styles.primaryActionText}>Log</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Parameter Cards Grid */}
@@ -646,6 +668,18 @@ export function TankDetailModal({ visible, tank, onClose }: TankDetailModalProps
             </View>
           </View>
         </Modal>
+
+        {/* Modals for Dosing & AI Assistance */}
+        <DosingCalculatorModal
+          visible={isDosingOpen}
+          tank={tank}
+          onClose={() => setIsDosingOpen(false)}
+        />
+        <AquaHubAIModal
+          visible={isAIOpen}
+          tank={tank}
+          onClose={() => setIsAIOpen(false)}
+        />
       </View>
     </Modal>
   );
@@ -822,12 +856,52 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     marginTop: 2,
   },
-  primaryActionButton: {
+  quickActionHeaderLeft: {
+    flex: 1,
+  },
+  quickActionButtonsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  aiQuickBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.surface.elevated,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.xs,
+  },
+  aiQuickBtnText: {
+    fontFamily: typography.fonts.sansBold,
+    fontSize: typography.sizes.xs,
+    color: "#FFFFFF",
+  },
+  dosingQuickBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.surface.elevated,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.xs,
+  },
+  dosingQuickBtnText: {
+    fontFamily: typography.fonts.sansBold,
+    fontSize: typography.sizes.xs,
+    color: "#FFFFFF",
+  },
+  primaryActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     backgroundColor: colors.brand.green,
-    paddingHorizontal: spacing.base,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.xs,
   },

@@ -199,3 +199,70 @@ export function calculateDosing(
     notes,
   };
 }
+
+export const STANDARD_REVIEWED_PRODUCTS: ProductDosingSpec[] = [
+  {
+    productId: "cah-reef-alk",
+    productName: "Creators Aquarium KH Builder",
+    manufacturer: "Creators Aquarium",
+    targetParameterSlug: "alk",
+    reviewStatus: "reviewed",
+    standardConcentrationRate: {
+      productAmount: 5,
+      productUnit: "ml",
+      targetWaterVolumeLitres: 100,
+      parameterDelta: 1.0,
+      parameterUnit: "dKH",
+    },
+    maxDailyShift: 0.5,
+    instructions: "Dilute in RO/DI water and dose slowly into high-flow sump area during lights-on period.",
+  },
+  {
+    productId: "cah-reef-ca",
+    productName: "Creators Aquarium Pure Calcium",
+    manufacturer: "Creators Aquarium",
+    targetParameterSlug: "ca",
+    reviewStatus: "reviewed",
+    standardConcentrationRate: {
+      productAmount: 5,
+      productUnit: "ml",
+      targetWaterVolumeLitres: 100,
+      parameterDelta: 10,
+      parameterUnit: "ppm",
+    },
+    maxDailyShift: 20,
+    instructions: "Dose into high flow area. Do not dose simultaneously with KH buffer to prevent precipitation.",
+  },
+  {
+    productId: "cah-reef-mg",
+    productName: "Creators Aquarium Bio-Magnesium",
+    manufacturer: "Creators Aquarium",
+    targetParameterSlug: "mg",
+    reviewStatus: "reviewed",
+    standardConcentrationRate: {
+      productAmount: 10,
+      productUnit: "ml",
+      targetWaterVolumeLitres: 100,
+      parameterDelta: 10,
+      parameterUnit: "ppm",
+    },
+    maxDailyShift: 30,
+    instructions: "Maintain magnesium between 1350 - 1420 ppm to stabilize calcium and alkalinity chemistry.",
+  },
+  {
+    productId: "cah-planted-k",
+    productName: "Creators Aquarium Potassium & Nitrate",
+    manufacturer: "Creators Aquarium",
+    targetParameterSlug: "no3",
+    reviewStatus: "reviewed",
+    standardConcentrationRate: {
+      productAmount: 5,
+      productUnit: "ml",
+      targetWaterVolumeLitres: 100,
+      parameterDelta: 2.0,
+      parameterUnit: "ppm",
+    },
+    maxDailyShift: 4.0,
+    instructions: "Dose weekly following 30-50% water change in high-tech nature aquariums.",
+  },
+];

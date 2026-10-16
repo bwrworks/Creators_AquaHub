@@ -14,6 +14,8 @@ import { useTanks, Tank } from "../../src/context/TankContext";
 import { getTankImage } from "../../src/utils/tankAssets";
 import { AddTankModal } from "../../src/components/modals/AddTankModal";
 import { TankDetailModal } from "../../src/components/modals/TankDetailModal";
+import { AquaHubAIModal } from "../../src/components/modals/AquaHubAIModal";
+import { DosingCalculatorModal } from "../../src/components/modals/DosingCalculatorModal";
 import { LoadingState, EmptyState, ErrorState, OfflineBanner } from "../../src/components/ui";
 
 type StateMode = "loaded" | "loading" | "empty" | "error" | "offline";
@@ -23,6 +25,8 @@ export default function HomeScreen() {
 
   const [stateMode, setStateMode] = useState<StateMode>("loaded");
   const [isAddTankOpen, setIsAddTankOpen] = useState(false);
+  const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isDosingOpen, setIsDosingOpen] = useState(false);
   const [selectedTank, setSelectedTank] = useState<Tank | null>(null);
 
   return (
@@ -193,13 +197,14 @@ export default function HomeScreen() {
 
               <TouchableOpacity
                 style={styles.actionTile}
+                onPress={() => setIsAIOpen(true)}
                 activeOpacity={0.8}
               >
                 <View style={styles.actionTileIcon}>
                   <Feather name="cpu" size={18} color="#FFFFFF" />
                 </View>
                 <Text style={styles.actionTileTitle}>AquaHub AI</Text>
-                <Text style={styles.actionTileSub}>Assistant</Text>
+                <Text style={styles.actionTileSub}>Assistant & Dosing</Text>
               </TouchableOpacity>
             </View>
 
@@ -284,7 +289,11 @@ export default function HomeScreen() {
             </View>
 
             {/* AI Assistant Quick Callout */}
-            <View style={styles.aiCard}>
+            <TouchableOpacity
+              style={styles.aiCard}
+              onPress={() => setIsAIOpen(true)}
+              activeOpacity={0.88}
+            >
               <View style={styles.aiHeaderRow}>
                 <View style={styles.aiBadge}>
                   <Text style={styles.aiBadgeText}>AI COMPANION</Text>
@@ -295,7 +304,10 @@ export default function HomeScreen() {
               <Text style={styles.aiDescription}>
                 Evidence-grounded assistant for water chemistry, species care, and safe maintenance routines.
               </Text>
-            </View>
+              <View style={styles.aiActionRow}>
+                <Text style={styles.aiActionText}>Ask AquaHub AI & Deterministic Dosing →</Text>
+              </View>
+            </TouchableOpacity>
 
             {/* Chemical Freshness Standard Legend */}
             <View style={styles.freshnessLegendCard}>
@@ -323,6 +335,16 @@ export default function HomeScreen() {
         visible={!!selectedTank}
         tank={selectedTank}
         onClose={() => setSelectedTank(null)}
+      />
+      <AquaHubAIModal
+        visible={isAIOpen}
+        tank={selectedTank || (tanks.length > 0 ? tanks[0] : null)}
+        onClose={() => setIsAIOpen(false)}
+      />
+      <DosingCalculatorModal
+        visible={isDosingOpen}
+        tank={selectedTank || (tanks.length > 0 ? tanks[0] : null)}
+        onClose={() => setIsDosingOpen(false)}
       />
     </SafeAreaView>
   );
@@ -740,6 +762,14 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.text.secondary,
     lineHeight: typography.lineHeights.sm,
+  },
+  aiActionRow: {
+    marginTop: spacing.xs,
+  },
+  aiActionText: {
+    fontFamily: typography.fonts.sansSemiBold,
+    fontSize: typography.sizes.xs,
+    color: colors.text.primary,
   },
   freshnessLegendCard: {
     backgroundColor: colors.surface.base,
