@@ -5,9 +5,7 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@cah/design-tokens": ["../../packages/design-tokens/src"],
-      "@cah/domain": ["../../packages/domain/src"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
