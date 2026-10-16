@@ -220,14 +220,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontFamily: typography.fonts.sansSemiBold,
-    fontSize: typography.sizes.xs,
-    color: colors.brand.green,
-    letterSpacing: typography.letterSpacing.wider,
+    fontSize: 10,
+    color: colors.text.secondary,
+    letterSpacing: 1.5,
   },
   title: {
     fontFamily: typography.fonts.display,
     fontSize: typography.sizes["2xl"],
-    color: colors.text.primary,
+    color: "#FFFFFF",
     marginTop: spacing.xxs,
   },
   createButton: {
@@ -269,8 +269,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border.subtle,
   },
   stateButtonActive: {
-    borderColor: colors.brand.green,
-    backgroundColor: "rgba(139, 207, 50, 0.15)",
+    borderColor: colors.border.hover,
+    backgroundColor: colors.surface.elevated,
   },
   stateButtonText: {
     fontFamily: typography.fonts.sansMedium,
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   stateButtonTextActive: {
-    color: colors.brand.green,
+    color: "#FFFFFF",
     fontFamily: typography.fonts.sansBold,
   },
   safetyCard: {
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontFamily: typography.fonts.sansBold,
     fontSize: typography.sizes.xs,
-    color: colors.brand.green,
+    color: "#FFFFFF",
   },
   authorNameRow: {
     flexDirection: "row",
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   badgePill: {
-    backgroundColor: "rgba(139, 207, 50, 0.15)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     paddingVertical: 1,
     paddingHorizontal: 4,
     borderRadius: radii.xs,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontFamily: typography.fonts.sansMedium,
     fontSize: 9,
-    color: colors.brand.green,
+    color: colors.text.secondary,
   },
   authorHandle: {
     fontFamily: typography.fonts.sans,

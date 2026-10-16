@@ -1,13 +1,19 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radii } from "@cah/design-tokens";
+import { useTanks } from "../../src/context/TankContext";
+import { AuthModal } from "../../src/components/modals/AuthModal";
 import { LoadingState, EmptyState, ErrorState, OfflineBanner } from "../../src/components/ui";
 
 type StateMode = "loaded" | "loading" | "empty" | "error" | "offline";
 
 export default function ProfileScreen() {
+  const { user, tanks } = useTanks();
+
   const [stateMode, setStateMode] = useState<StateMode>("loaded");
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   const handleExportData = () => {
     Alert.alert(
@@ -20,7 +26,7 @@ export default function ProfileScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       "Delete Account & Data",
-      "This action permanently deletes your profile, tanks, readings, media assets, and AI memory across Supabase, Cloudinary, and Convex. This cannot be undone.",
+      "This action permanently deletes your profile, tanks, readings, media assets, and AI memory. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         { text: "Proceed to Verify", style: "destructive" },
@@ -30,7 +36,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {stateMode === "offline" && (
           <OfflineBanner message="Offline Mode • Profile cached locally • 0 network requests" />
         )}
@@ -38,14 +44,15 @@ export default function ProfileScreen() {
         {/* State Preview Switcher */}
         <View style={styles.stateSelectorContainer}>
           <Text style={styles.stateSelectorLabel}>UI State Preview:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stateButtonsRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.stateButtonsRow}
+          >
             {(["loaded", "loading", "empty", "error", "offline"] as StateMode[]).map((mode) => (
               <TouchableOpacity
                 key={mode}
-                style={[
-                  styles.stateButton,
-                  stateMode === mode && styles.stateButtonActive,
-                ]}
+                style={[styles.stateButton, stateMode === mode && styles.stateButtonActive]}
                 onPress={() => setStateMode(mode)}
                 activeOpacity={0.7}
               >
@@ -75,7 +82,7 @@ export default function ProfileScreen() {
             title="Session Not Found"
             description="You are currently running in anonymous guest mode. Connect your account to enable cloud sync."
             actionLabel="Sign In"
-            onAction={() => setStateMode("loaded")}
+            onAction={() => setIsAuthOpen(true)}
           />
         )}
 
@@ -93,18 +100,42 @@ export default function ProfileScreen() {
             {/* Profile Card */}
             <View style={styles.profileHeader}>
               <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>CA</Text>
+                <Text style={styles.avatarText}>
+                  {user.name ? user.name.slice(0, 2).toUpperCase() : "CA"}
+                </Text>
               </View>
               <View style={styles.profileMeta}>
                 <View style={styles.nameRow}>
-                  <Text style={styles.profileName}>Kiran Aquarist</Text>
+                  <Text style={styles.profileName}>{user.name}</Text>
                   <View style={styles.freeTierBadge}>
                     <Text style={styles.freeTierText}>₹0 FREE TIER</Text>
                   </View>
                 </View>
-                <Text style={styles.profileHandle}>@kiran_aquascapes • Bengaluru</Text>
+                <Text style={styles.profileHandle}>
+                  {user.handle || "@guest"} • {tanks.length} Aquariums Registered
+                </Text>
               </View>
             </View>
+
+            {/* Quick Session Switcher / Auth Button */}
+            <TouchableOpacity
+              style={styles.authSwitchCard}
+              onPress={() => setIsAuthOpen(true)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.authIconContainer}>
+                <Feather name="user-check" size={18} color="#FFFFFF" />
+              </View>
+              <View style={styles.authMetaContainer}>
+                <Text style={styles.authTitle}>
+                  {user.isLoggedIn ? "Account & Authentication" : "Sign In or Switch Account"}
+                </Text>
+                <Text style={styles.authSubtitle}>
+                  {user.isLoggedIn ? `Active: ${user.email || user.name}` : "Tap to log in or use Demo Aquarist"}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.text.secondary} />
+            </TouchableOpacity>
 
             {/* Account Settings Section */}
             <View style={styles.section}>
@@ -156,11 +187,14 @@ export default function ProfileScreen() {
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Creators AquaHub v1.0.0 • Creators Aquarium</Text>
-              <Text style={styles.footerSubtext}>Built for Indian Aquarists • Where Oceans Meet Nature</Text>
+              <Text style={styles.footerSubtext}>Built for Aquarists • Where Oceans Meet Nature</Text>
             </View>
           </>
         )}
       </ScrollView>
+
+      {/* Auth & Profile Modal */}
+      <AuthModal visible={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </SafeAreaView>
   );
 }
@@ -203,8 +237,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border.subtle,
   },
   stateButtonActive: {
-    borderColor: colors.brand.green,
-    backgroundColor: "rgba(139, 207, 50, 0.15)",
+    borderColor: colors.border.hover,
+    backgroundColor: colors.surface.elevated,
   },
   stateButtonText: {
     fontFamily: typography.fonts.sansMedium,
@@ -212,7 +246,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   stateButtonTextActive: {
-    color: colors.brand.green,
+    color: "#FFFFFF",
     fontFamily: typography.fonts.sansBold,
   },
   profileHeader: {
@@ -227,14 +261,14 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: colors.surface.elevated,
     borderWidth: 1,
-    borderColor: colors.border.active,
+    borderColor: colors.border.subtle,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarText: {
     fontFamily: typography.fonts.sansBold,
     fontSize: typography.sizes.md,
-    color: colors.brand.green,
+    color: "#FFFFFF",
   },
   profileMeta: {
     gap: 2,
@@ -248,25 +282,58 @@ const styles = StyleSheet.create({
   profileName: {
     fontFamily: typography.fonts.sansBold,
     fontSize: typography.sizes.base,
-    color: colors.text.primary,
+    color: "#FFFFFF",
   },
   freeTierBadge: {
-    backgroundColor: "rgba(139, 207, 50, 0.15)",
-    paddingVertical: 1,
-    paddingHorizontal: spacing.xs,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
     borderRadius: radii.xs,
-    borderWidth: 1,
-    borderColor: "rgba(139, 207, 50, 0.3)",
   },
   freeTierText: {
-    fontFamily: typography.fonts.sansBold,
+    fontFamily: typography.fonts.sansSemiBold,
     fontSize: 9,
-    color: colors.brand.green,
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
   },
   profileHandle: {
     fontFamily: typography.fonts.sans,
     fontSize: typography.sizes.xs,
-    color: colors.text.muted,
+    color: colors.text.secondary,
+  },
+  authSwitchCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    padding: spacing.md,
+  },
+  authIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.xs,
+    backgroundColor: colors.surface.elevated,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  authMetaContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  authTitle: {
+    fontFamily: typography.fonts.sansBold,
+    fontSize: typography.sizes.sm,
+    color: "#FFFFFF",
+  },
+  authSubtitle: {
+    fontFamily: typography.fonts.sans,
+    fontSize: 11,
+    color: colors.text.secondary,
   },
   section: {
     gap: spacing.xs,
@@ -274,10 +341,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: typography.fonts.sansSemiBold,
     fontSize: typography.sizes.xs,
-    color: colors.text.muted,
+    color: colors.text.secondary,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    paddingHorizontal: spacing.xxs,
   },
   card: {
     backgroundColor: colors.surface.card,
@@ -286,10 +352,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border.subtle,
     overflow: "hidden",
   },
-  dangerCard: {
-    borderColor: "rgba(239, 68, 68, 0.3)",
-    backgroundColor: "rgba(239, 68, 68, 0.05)",
-  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -297,18 +359,23 @@ const styles = StyleSheet.create({
     padding: spacing.base,
   },
   rowText: {
-    fontFamily: typography.fonts.sansMedium,
+    fontFamily: typography.fonts.sans,
     fontSize: typography.sizes.sm,
     color: colors.text.primary,
   },
   rowArrow: {
     fontFamily: typography.fonts.sans,
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     color: colors.text.muted,
   },
   divider: {
     height: 1,
     backgroundColor: colors.border.subtle,
+    marginHorizontal: spacing.base,
+  },
+  dangerCard: {
+    borderColor: "rgba(239, 68, 68, 0.2)",
+    backgroundColor: "rgba(239, 68, 68, 0.05)",
   },
   dangerText: {
     fontFamily: typography.fonts.sansBold,
@@ -322,13 +389,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   dangerArrow: {
-    fontFamily: typography.fonts.sansBold,
-    fontSize: typography.sizes.md,
+    fontFamily: typography.fonts.sans,
+    fontSize: typography.sizes.lg,
     color: colors.status.danger,
   },
   footer: {
     alignItems: "center",
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.md,
     gap: spacing.xxs,
   },
   footerText: {
@@ -338,7 +405,7 @@ const styles = StyleSheet.create({
   },
   footerSubtext: {
     fontFamily: typography.fonts.sans,
-    fontSize: 11,
-    color: "rgba(163, 166, 159, 0.6)",
+    fontSize: 10,
+    color: colors.text.muted,
   },
 });

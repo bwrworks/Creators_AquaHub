@@ -1,177 +1,182 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radii } from "@cah/design-tokens";
-import { SYNTHETIC_TANKS, TankWaterCategory } from "@cah/domain";
-import { LoadingState, EmptyState, ErrorState, OfflineBanner, StatusBadge } from "../../src/components/ui";
+import { useTanks, Tank, WaterCategory } from "../../src/context/TankContext";
+import { getTankImage } from "../../src/utils/tankAssets";
+import { AddTankModal } from "../../src/components/modals/AddTankModal";
+import { TankDetailModal } from "../../src/components/modals/TankDetailModal";
 
-type StateMode = "loaded" | "loading" | "empty" | "error" | "offline";
-type CategoryFilter = "all" | TankWaterCategory;
+type CategoryFilter = "all" | WaterCategory;
 
 export default function TanksScreen() {
-  const [stateMode, setStateMode] = useState<StateMode>("loaded");
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const { tanks } = useTanks();
 
-  const filteredTanks = SYNTHETIC_TANKS.filter((tank) => {
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [isAddTankOpen, setIsAddTankOpen] = useState(false);
+  const [selectedTank, setSelectedTank] = useState<Tank | null>(null);
+
+  const filteredTanks = tanks.filter((tank) => {
     if (categoryFilter === "all") return true;
-    return tank.tankType === categoryFilter;
+    return tank.category === categoryFilter;
   });
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {stateMode === "offline" && (
-          <OfflineBanner message="Offline Mode • Tanks cached locally • 0 network requests" />
-        )}
-
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Top Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.subtitle}>MY AQUARIUMS</Text>
             <Text style={styles.title}>Living Systems</Text>
           </View>
-          <TouchableOpacity style={styles.addButton} activeOpacity={0.85}>
-            <Text style={styles.addButtonText}>+ New Tank</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            activeOpacity={0.85}
+            onPress={() => setIsAddTankOpen(true)}
+          >
+            <Feather name="plus" size={16} color="#050505" />
+            <Text style={styles.addButtonText}>Add Tank</Text>
           </TouchableOpacity>
         </View>
 
-        {/* State Preview Switcher */}
-        <View style={styles.stateSelectorContainer}>
-          <Text style={styles.stateSelectorLabel}>UI State Preview:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stateButtonsRow}>
-            {(["loaded", "loading", "empty", "error", "offline"] as StateMode[]).map((mode) => (
+        {/* Category Filter Pills */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryRow}
+        >
+          {(
+            [
+              { id: "all", label: "All Systems" },
+              { id: "marine_reef", label: "Marine Reef" },
+              { id: "planted", label: "Planted Nature" },
+              { id: "freshwater", label: "Freshwater" },
+            ] as const
+          ).map((cat) => {
+            const isActive = categoryFilter === cat.id;
+            return (
               <TouchableOpacity
-                key={mode}
-                style={[
-                  styles.stateButton,
-                  stateMode === mode && styles.stateButtonActive,
-                ]}
-                onPress={() => setStateMode(mode)}
-                activeOpacity={0.7}
+                key={cat.id}
+                style={[styles.categoryBadge, isActive && styles.activeCategoryBadge]}
+                onPress={() => setCategoryFilter(cat.id)}
+                activeOpacity={0.75}
               >
-                <Text
-                  style={[
-                    styles.stateButtonText,
-                    stateMode === mode && styles.stateButtonTextActive,
-                  ]}
-                >
-                  {mode.toUpperCase()}
+                {isActive && <View style={styles.activePillDot} />}
+                <Text style={[styles.categoryText, isActive && styles.activeCategoryText]}>
+                  {cat.label}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+            );
+          })}
+        </ScrollView>
 
-        {/* Conditional States */}
-        {stateMode === "loading" && (
-          <LoadingState
-            message="Loading aquarium configurations..."
-            submessage="Verifying local water volume metrics"
-          />
-        )}
+        {/* Tanks List */}
+        {filteredTanks.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Feather name="droplet" size={42} color={colors.text.muted} />
+            <Text style={styles.emptyTitle}>No Aquariums in This Category</Text>
+            <Text style={styles.emptyDescription}>
+              Add your display tank, frag system, or high-tech aquascape to start tracking chemistry.
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyActionButton}
+              onPress={() => setIsAddTankOpen(true)}
+            >
+              <Text style={styles.emptyActionText}>+ Create New Setup</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.tankList}>
+            {filteredTanks.map((tank) => (
+              <TouchableOpacity
+                key={tank.id}
+                style={styles.tankCard}
+                onPress={() => setSelectedTank(tank)}
+                activeOpacity={0.88}
+              >
+                {/* Tank Cover Photo with Gradient Scrim */}
+                <View style={styles.cardImageContainer}>
+                  <Image source={getTankImage(tank)} style={styles.cardImage} resizeMode="cover" />
+                  <View style={styles.cardImageScrim} />
 
-        {stateMode === "empty" && (
-          <EmptyState
-            title="No Aquariums Registered"
-            description="Register your display tank, nano setup, or breeding aquarium to maintain precise water chemistry and automated dosing bounds."
-            actionLabel="+ Create Tank"
-            onAction={() => setStateMode("loaded")}
-          />
-        )}
-
-        {stateMode === "error" && (
-          <ErrorState
-            title="Failed to Retrieve Aquariums"
-            message="Database query could not complete. Using cached offline storage."
-            retryLabel="Reload Tanks"
-            onRetry={() => setStateMode("loaded")}
-          />
-        )}
-
-        {(stateMode === "loaded" || stateMode === "offline") && (
-          <>
-            {/* Category Filter Tabs */}
-            <View style={styles.categoryRow}>
-              {(
-                [
-                  { id: "all", label: "All" },
-                  { id: "freshwater", label: "Freshwater" },
-                  { id: "planted", label: "Planted" },
-                  { id: "marine_reef", label: "Marine Reef" },
-                ] as const
-              ).map((cat) => (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[
-                    styles.categoryBadge,
-                    categoryFilter === cat.id && styles.activeCategoryBadge,
-                  ]}
-                  onPress={() => setCategoryFilter(cat.id)}
-                  activeOpacity={0.75}
-                >
-                  <Text
-                    style={[
-                      styles.categoryText,
-                      categoryFilter === cat.id && styles.activeCategoryText,
-                    ]}
-                  >
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Tanks List */}
-            {filteredTanks.length === 0 ? (
-              <EmptyState
-                title="No Tanks in Category"
-                description={`You have not added any ${categoryFilter} tanks yet.`}
-                actionLabel="View All Tanks"
-                onAction={() => setCategoryFilter("all")}
-              />
-            ) : (
-              filteredTanks.map((tank) => (
-                <View key={tank.id} style={styles.tankCard}>
-                  <View style={styles.tankHeader}>
-                    <View style={styles.tankTitleArea}>
-                      <Text style={styles.tankName}>{tank.name}</Text>
-                      <Text style={styles.tankSetupDate}>Setup: {tank.setupDate}</Text>
+                  {/* Overlaid Badges */}
+                  <View style={styles.cardImageOverlayTop}>
+                    <View style={styles.categoryPill}>
+                      <Text style={styles.categoryPillText}>{tank.categoryLabel.toUpperCase()}</Text>
                     </View>
-                    <StatusBadge type="tankType" value={tank.tankType} />
-                  </View>
-
-                  <Text style={styles.tankDesc}>{tank.description}</Text>
-
-                  <View style={styles.tankMetricsRow}>
-                    <View style={styles.metricItem}>
-                      <Text style={styles.metricLabel}>Volume</Text>
-                      <Text style={styles.metricValue}>{tank.volumeLiters} L</Text>
-                    </View>
-                    <View style={styles.metricItem}>
-                      <Text style={styles.metricLabel}>Freshness</Text>
-                      <StatusBadge type="freshness" value={tank.parametersSummary.overallFreshness} />
-                    </View>
-                    <View style={styles.metricItem}>
-                      <Text style={styles.metricLabel}>Readings</Text>
-                      <Text style={styles.metricValue}>
-                        {tank.parametersSummary.freshCount}F / {tank.parametersSummary.agingCount}A / {tank.parametersSummary.staleCount}S
+                    <View style={styles.volumePill}>
+                      <Feather name="droplet" size={11} color="#FFFFFF" />
+                      <Text style={styles.volumePillText}>
+                        {tank.volumeLiters} L • {tank.volumeGallons} gal
                       </Text>
                     </View>
                   </View>
 
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity style={styles.actionButtonOutline} activeOpacity={0.75}>
-                      <Text style={styles.actionButtonOutlineText}>View History</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButtonSolid} activeOpacity={0.75}>
-                      <Text style={styles.actionButtonSolidText}>+ Log Chemistry</Text>
-                    </TouchableOpacity>
+                  <View style={styles.cardImageOverlayBottom}>
+                    <Text style={styles.tankCardTitle} numberOfLines={1}>
+                      {tank.name}
+                    </Text>
+                    <Text style={styles.tankDimensions}>
+                      {tank.dimensions.length} × {tank.dimensions.width} × {tank.dimensions.height} cm • Setup {tank.setupDate}
+                    </Text>
                   </View>
                 </View>
-              ))
-            )}
-          </>
+
+                {/* Card Parameters Quick Bar */}
+                <View style={styles.cardParamsContainer}>
+                  <View style={styles.cardParamsHeader}>
+                    <Text style={styles.cardParamsLabel}>LATEST READINGS</Text>
+                    <View style={styles.detailsActionRow}>
+                      <Text style={styles.viewDetailsText}>View System</Text>
+                      <Feather name="chevron-right" size={14} color={colors.text.secondary} />
+                    </View>
+                  </View>
+
+                  <View style={styles.paramsChipsRow}>
+                    {tank.parameters.slice(0, 4).map((p) => {
+                      const dotColor =
+                        p.freshness === "fresh"
+                          ? colors.brand.green
+                          : p.freshness === "aging"
+                          ? colors.status.warning
+                          : colors.status.danger;
+
+                      return (
+                        <View key={p.id} style={styles.paramChip}>
+                          <View style={[styles.paramDot, { backgroundColor: dotColor }]} />
+                          <Text style={styles.paramChipName}>{p.name}:</Text>
+                          <Text style={styles.paramChipValue}>
+                            {p.value} {p.unit}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       </ScrollView>
+
+      {/* Add Tank Flow Modal */}
+      <AddTankModal visible={isAddTankOpen} onClose={() => setIsAddTankOpen(false)} />
+
+      {/* Tank Detail & Chemistry Logger Modal */}
+      <TankDetailModal
+        visible={!!selectedTank}
+        tank={selectedTank}
+        onClose={() => setSelectedTank(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -194,82 +199,56 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontFamily: typography.fonts.sansSemiBold,
-    fontSize: typography.sizes.xs,
-    color: colors.brand.green,
-    letterSpacing: typography.letterSpacing.wider,
+    fontSize: 10,
+    color: colors.text.secondary,
+    letterSpacing: 1.5,
   },
   title: {
     fontFamily: typography.fonts.display,
     fontSize: typography.sizes["2xl"],
-    color: colors.text.primary,
-    marginTop: spacing.xxs,
+    color: "#FFFFFF",
+    marginTop: 2,
   },
   addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     backgroundColor: colors.brand.green,
-    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.sm,
+    paddingVertical: 8,
+    borderRadius: radii.xs,
   },
   addButtonText: {
     fontFamily: typography.fonts.sansBold,
     fontSize: typography.sizes.xs,
-    color: colors.text.inverse,
-  },
-  stateSelectorContainer: {
-    backgroundColor: colors.surface.card,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    padding: spacing.xs,
-    gap: spacing.xs,
-  },
-  stateSelectorLabel: {
-    fontFamily: typography.fonts.sansSemiBold,
-    fontSize: 10,
-    color: colors.text.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  stateButtonsRow: {
-    flexDirection: "row",
-    gap: spacing.xs,
-  },
-  stateButton: {
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.xs,
-    backgroundColor: colors.surface.base,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-  },
-  stateButtonActive: {
-    borderColor: colors.brand.green,
-    backgroundColor: "rgba(139, 207, 50, 0.15)",
-  },
-  stateButtonText: {
-    fontFamily: typography.fonts.sansMedium,
-    fontSize: 10,
-    color: colors.text.secondary,
-  },
-  stateButtonTextActive: {
-    color: colors.brand.green,
-    fontFamily: typography.fonts.sansBold,
+    color: "#050505",
+    letterSpacing: 0.3,
   },
   categoryRow: {
     flexDirection: "row",
     gap: spacing.xs,
+    paddingVertical: 2,
   },
   categoryBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: radii.full,
-    backgroundColor: colors.surface.base,
+    backgroundColor: colors.surface.card,
     borderWidth: 1,
     borderColor: colors.border.subtle,
   },
   activeCategoryBadge: {
-    backgroundColor: "rgba(139, 207, 50, 0.15)",
-    borderColor: colors.brand.green,
+    backgroundColor: colors.surface.elevated,
+    borderColor: colors.border.hover,
+  },
+  activePillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.brand.green,
   },
   categoryText: {
     fontFamily: typography.fonts.sansMedium,
@@ -277,96 +256,182 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   activeCategoryText: {
-    color: colors.brand.green,
-    fontFamily: typography.fonts.sansSemiBold,
+    color: "#FFFFFF",
+    fontFamily: typography.fonts.sansBold,
+  },
+  tankList: {
+    gap: spacing.base,
   },
   tankCard: {
     backgroundColor: colors.surface.card,
     borderRadius: radii.base,
     borderWidth: 1,
     borderColor: colors.border.subtle,
-    padding: spacing.base,
-    gap: spacing.sm,
+    overflow: "hidden",
   },
-  tankHeader: {
+  cardImageContainer: {
+    height: 160,
+    width: "100%",
+    position: "relative",
+    justifyContent: "space-between",
+    padding: spacing.md,
+  },
+  cardImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    height: "100%",
+  },
+  cardImageScrim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(5, 5, 5, 0.5)",
+  },
+  cardImageOverlayTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
   },
-  tankTitleArea: {
-    flex: 1,
-    marginRight: spacing.xs,
+  categoryPill: {
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
-  tankName: {
-    fontFamily: typography.fonts.sansBold,
-    fontSize: typography.sizes.base,
-    color: colors.text.primary,
+  categoryPillText: {
+    fontFamily: typography.fonts.sansSemiBold,
+    fontSize: 9,
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
   },
-  tankSetupDate: {
+  volumePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  volumePillText: {
+    fontFamily: typography.fonts.sansMedium,
+    fontSize: 10,
+    color: "#FFFFFF",
+  },
+  cardImageOverlayBottom: {
+    gap: 2,
+  },
+  tankCardTitle: {
+    fontFamily: typography.fonts.displayMedium,
+    fontSize: typography.sizes.lg,
+    color: "#FFFFFF",
+  },
+  tankDimensions: {
     fontFamily: typography.fonts.sans,
     fontSize: 11,
-    color: colors.text.muted,
-    marginTop: 2,
-  },
-  tankDesc: {
-    fontFamily: typography.fonts.sans,
-    fontSize: typography.sizes.xs,
     color: colors.text.secondary,
-    lineHeight: typography.lineHeights.xs,
   },
-  tankMetricsRow: {
+  cardParamsContainer: {
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  cardParamsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: colors.surface.base,
-    borderRadius: radii.sm,
-    padding: spacing.xs,
-    marginTop: 2,
-  },
-  metricItem: {
     alignItems: "center",
-    flex: 1,
   },
-  metricLabel: {
-    fontFamily: typography.fonts.sans,
-    fontSize: 10,
+  cardParamsLabel: {
+    fontFamily: typography.fonts.sansSemiBold,
+    fontSize: 9,
     color: colors.text.muted,
-    marginBottom: 2,
+    letterSpacing: 0.8,
   },
-  metricValue: {
-    fontFamily: typography.fonts.sansBold,
-    fontSize: typography.sizes.xs,
-    color: colors.text.primary,
-  },
-  cardActions: {
+  detailsActionRow: {
     flexDirection: "row",
-    gap: spacing.xs,
-    marginTop: spacing.xxs,
-  },
-  actionButtonOutline: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.xs,
-    paddingVertical: spacing.xs,
     alignItems: "center",
+    gap: 2,
   },
-  actionButtonOutlineText: {
+  viewDetailsText: {
     fontFamily: typography.fonts.sansMedium,
-    fontSize: typography.sizes.xs,
+    fontSize: 11,
     color: colors.text.secondary,
   },
-  actionButtonSolid: {
-    flex: 1,
-    backgroundColor: "rgba(139, 207, 50, 0.15)",
-    borderWidth: 1,
-    borderColor: colors.brand.green,
-    borderRadius: radii.xs,
-    paddingVertical: spacing.xs,
-    alignItems: "center",
+  paramsChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginTop: 2,
   },
-  actionButtonSolidText: {
-    fontFamily: typography.fonts.sansSemiBold,
+  paramChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: colors.surface.base,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radii.xs,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  paramDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  paramChipName: {
+    fontFamily: typography.fonts.sansMedium,
+    fontSize: 11,
+    color: colors.text.secondary,
+  },
+  paramChipValue: {
+    fontFamily: typography.fonts.sansBold,
+    fontSize: 11,
+    color: "#FFFFFF",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surface.card,
+    borderRadius: radii.base,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    padding: spacing["2xl"],
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  emptyTitle: {
+    fontFamily: typography.fonts.sansBold,
+    fontSize: typography.sizes.base,
+    color: "#FFFFFF",
+  },
+  emptyDescription: {
+    fontFamily: typography.fonts.sans,
     fontSize: typography.sizes.xs,
-    color: colors.brand.green,
+    color: colors.text.secondary,
+    textAlign: "center",
+    lineHeight: typography.lineHeights.xs,
+    maxWidth: 280,
+  },
+  emptyActionButton: {
+    backgroundColor: colors.brand.green,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.xs,
+    marginTop: spacing.xs,
+  },
+  emptyActionText: {
+    fontFamily: typography.fonts.sansBold,
+    fontSize: typography.sizes.xs,
+    color: "#050505",
   },
 });
